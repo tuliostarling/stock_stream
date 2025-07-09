@@ -40,3 +40,7 @@ npm-debug.log
 /config/test.exs
 .elixir_ls
 .vscode
+
+# dialyzer files
+/priv/plts/*.plt
+/priv/plts/*.plt.hash

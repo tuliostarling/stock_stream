@@ -9,7 +9,9 @@ defmodule StockStream.MixProject do
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
-      deps: deps()
+      deps: deps(),
+      description: description(),
+      dialyzer: dialyzer()
     ]
   end
 
@@ -25,7 +27,18 @@ defmodule StockStream.MixProject do
 
   # Specifies which paths to compile per environment.
   defp elixirc_paths(:test), do: ["lib", "test/support"]
-  defp elixirc_paths(_), do: ["lib"]
+  defp elixirc_paths(:dev), do: ["lib", "priv/repo/seeds"]
+  defp elixirc_paths(:prod), do: ["lib"]
+
+  defp description, do: "Arionkoder Elixir Hiring Challenge"
+
+  defp dialyzer do
+    [
+      plt_core_path: "priv/plts",
+      plt_file: {:no_warn, "priv/plts/dialyzer.plt"},
+      plt_add_apps: [:mix]
+    ]
+  end
 
   # Specifies your project dependencies.
   #
@@ -57,7 +70,9 @@ defmodule StockStream.MixProject do
       {:gettext, "~> 0.26"},
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.1.1"},
-      {:bandit, "~> 1.5"}
+      {:bandit, "~> 1.5"},
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.4", only: [:dev], runtime: false}
     ]
   end
 
@@ -73,6 +88,12 @@ defmodule StockStream.MixProject do
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
+      "check.quality": [
+        "compile --warnings-as-errors",
+        "credo --strict",
+        "format --check-formatted",
+        "dialyzer --force-check"
+      ],
       "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
       "assets.build": ["tailwind stock_stream", "esbuild stock_stream"],
       "assets.deploy": [
