@@ -10,24 +10,32 @@ defmodule StockStream.Markets.PriceStreamer do
 
   alias StockStream.Markets
 
-  @type state :: %{symbol: String.t(), price: float()}
+  @type state :: %{symbol: String.t(), price: float(), tick_ms: pos_integer()}
 
   @spec start_link(String.t()) :: GenServer.on_start()
-  def start_link(symbol), do: GenServer.start_link(__MODULE__, symbol, name: via(symbol))
+  def start_link(symbol) when is_binary(symbol), do: start_link({symbol, []})
+
+  @spec start_link({String.t(), keyword()}) :: GenServer.on_start()
+  def start_link({symbol, opts}) do
+    GenServer.start_link(__MODULE__, {symbol, opts}, name: via(symbol))
+  end
 
   @spec via(String.t()) :: {:via, module(), term()}
   def via(symbol), do: {:via, Registry, {StockStream.Registry, {:streamer, symbol}}}
 
-  @impl GenServer
-  @spec init(String.t()) :: {:ok, state()}
-  def init(symbol) do
-    schedule_tick()
-    {:ok, %{symbol: symbol, price: random_price()}}
+  @impl true
+  @spec init({String.t(), keyword()}) :: {:ok, state()}
+  def init({symbol, opts}) do
+    interval = Keyword.get(opts, :tick_ms, 2_000)
+    state = %{symbol: symbol, price: random_price(), tick_ms: interval}
+
+    schedule_tick(interval)
+    {:ok, state}
   end
 
-  @impl GenServer
+  @impl true
   @spec handle_info(:tick, state()) :: {:noreply, state()}
-  def handle_info(:tick, %{price: old_price} = state) do
+  def handle_info(:tick, %{price: old_price, tick_ms: tick_ms} = state) do
     new_price = jitter(old_price)
     last_pct = Float.round((new_price - old_price) / old_price * 100, 2)
 
@@ -37,12 +45,12 @@ defmodule StockStream.Markets.PriceStreamer do
       {:price_update, state.symbol, new_price, last_pct}
     )
 
-    schedule_tick()
+    schedule_tick(tick_ms)
     {:noreply, %{state | price: new_price}}
   end
 
-  @spec schedule_tick() :: reference()
-  defp schedule_tick, do: Process.send_after(self(), :tick, 2_000)
+  @spec schedule_tick(pos_integer()) :: reference()
+  defp schedule_tick(ms), do: Process.send_after(self(), :tick, ms)
 
   @spec random_price() :: float()
   defp random_price, do: :rand.uniform(1_000) / 1

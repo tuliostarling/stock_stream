@@ -7,34 +7,35 @@ defmodule StockStream.Application do
 
   @default_symbols ~w(AAPL MSFT TSLA)
 
+  @common_children [
+    StockStreamWeb.Telemetry,
+    StockStream.Repo,
+    {DNSCluster, query: Application.compile_env(:stock_stream, :dns_cluster_query) || :ignore},
+    {Phoenix.PubSub, name: StockStream.PubSub},
+    {Finch, name: StockStream.Finch},
+    StockStreamWeb.Endpoint
+  ]
+
+  @runtime_only_children [
+    {Registry, keys: :unique, name: StockStream.Registry},
+    StockStream.Markets.Supervisor
+  ]
+
   @impl true
   def start(_type, _args) do
-    children = [
-      StockStreamWeb.Telemetry,
-      StockStream.Repo,
-      {DNSCluster, query: Application.get_env(:stock_stream, :dns_cluster_query) || :ignore},
-      {Phoenix.PubSub, name: StockStream.PubSub},
-      # Start the Finch HTTP client for sending emails
-      {Finch, name: StockStream.Finch},
-      # Start a worker by calling: StockStream.Worker.start_link(arg)
-      # {StockStream.Worker, arg},
-      # Start to serve requests, typically the last entry
-      StockStreamWeb.Endpoint,
-      {Registry, keys: :unique, name: StockStream.Registry},
-      StockStream.Markets.Supervisor
-    ]
+    children = @common_children ++ if(Mix.env() == :test, do: [], else: @runtime_only_children)
 
-    # See https://hexdocs.pm/elixir/Supervisor.html
-    # for other strategies and supported options
     opts = [strategy: :one_for_one, name: StockStream.Supervisor]
-    {:ok, pid} = Supervisor.start_link(children, opts)
+    {:ok, sup} = Supervisor.start_link(children, opts)
 
-    Enum.each(
-      Application.get_env(:stock_stream, :initial_symbols, @default_symbols),
-      &StockStream.Markets.start_stream/1
-    )
+    unless Mix.env() == :test do
+      Enum.each(
+        Application.get_env(:stock_stream, :initial_symbols, @default_symbols),
+        &StockStream.Markets.start_stream/1
+      )
+    end
 
-    {:ok, pid}
+    {:ok, sup}
   end
 
   # Tell Phoenix to update the endpoint configuration

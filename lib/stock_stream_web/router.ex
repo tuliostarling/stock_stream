@@ -17,8 +17,7 @@ defmodule StockStreamWeb.Router do
   scope "/", StockStreamWeb do
     pipe_through(:browser)
 
-    get("/", PageController, :home)
-    live("/prices", PriceBoardLive)
+    live("/", PriceBoardLive)
   end
 
   # Other scopes may use custom stacks.
