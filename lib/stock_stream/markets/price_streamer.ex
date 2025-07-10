@@ -27,17 +27,18 @@ defmodule StockStream.Markets.PriceStreamer do
 
   @impl GenServer
   @spec handle_info(:tick, state()) :: {:noreply, state()}
-  def handle_info(:tick, state) do
-    price = jitter(state.price)
+  def handle_info(:tick, %{price: old_price} = state) do
+    new_price = jitter(old_price)
+    last_pct = Float.round((new_price - old_price) / old_price * 100, 2)
 
     Phoenix.PubSub.broadcast(
       StockStream.PubSub,
       Markets.topic(state.symbol),
-      {:price_update, state.symbol, price}
+      {:price_update, state.symbol, new_price, last_pct}
     )
 
     schedule_tick()
-    {:noreply, %{state | price: price}}
+    {:noreply, %{state | price: new_price}}
   end
 
   @spec schedule_tick() :: reference()

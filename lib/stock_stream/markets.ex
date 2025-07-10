@@ -13,6 +13,9 @@ defmodule StockStream.Markets do
   @spec subscribe(String.t()) :: :ok | {:error, term()}
   def subscribe(symbol), do: PubSub.subscribe(StockStream.PubSub, topic(symbol))
 
+  @spec unsubscribe(String.t()) :: :ok
+  def unsubscribe(symbol), do: PubSub.unsubscribe(StockStream.PubSub, topic(symbol))
+
   @doc "Broadcast helper to be used internally"
   @spec topic(String.t()) :: String.t()
   def topic(symbol), do: "prices:#{symbol}"
