@@ -113,30 +113,34 @@ defmodule StockStreamWeb.PriceBoardLive do
           </tr>
         </thead>
         <tbody>
-        <%= for symbol <- @symbols do %>
-          <% entry = @prices[symbol] %>
+          <%= for symbol <- @symbols do %>
+            <% entry = @prices[symbol] %>
 
-          <tr id={"row-#{symbol}"} phx-update="replace" class="hover:bg-slate-50 border-b border-slate-200">
-            <td class="p-4 py-5 rounded-lg">
-              <p class="block font-semibold text-sm text-slate-800">{symbol}</p>
-            </td>
+            <tr
+              id={"row-#{symbol}"}
+              phx-update="replace"
+              class="hover:bg-slate-50 border-b border-slate-200"
+            >
+              <td class="p-4 py-5 rounded-lg">
+                <p class="block font-semibold text-sm text-slate-800">{symbol}</p>
+              </td>
 
-            <td class="p-4 py-5">
-              <p class="block text-sm text-slate-800">
+              <td class="p-4 py-5">
+                <p class="block text-sm text-slate-800">
+                  <%= if entry do %>
+                    US$ {entry.start}
+                  <% else %>
+                    <p class="block text-slate-800">
+                      <.icon name="hero-minus" class="w-4 h-4" />
+                    </p>
+                  <% end %>
+                </p>
+              </td>
+              
+    <!-- overall % change since start -->
+              <td class="p-4 py-5">
                 <%= if entry do %>
-                  US$ <%= entry.start %>
-                <% else %>
-                  <p class="block text-slate-800">
-                    <.icon name="hero-minus" class="w-4 h-4" />
-                  </p>
-                <% end %>
-              </p>
-            </td>
-
-              <!-- overall % change since start -->
-            <td class="p-4 py-5">
-              <%= if entry do %>
-                <p class={
+                  <p class={
                   "flex items-center justify-start text-sm " <>
                     cond do
                       entry.start_pct > 0 -> "text-green-600"
@@ -144,38 +148,38 @@ defmodule StockStreamWeb.PriceBoardLive do
                       true -> "text-blue-500"
                     end
                 }>
-                  <%= cond do %>
-                    <% entry.start_pct > 0 -> %>
-                      <.icon name="hero-arrow-up" class="mr-1 w-3 h-3" />
-                    <% entry.start_pct < 0 -> %>
-                      <.icon name="hero-arrow-down" class="mr-1 w-3 h-3" />
-                    <% true -> %>
-                      <.icon name="hero-minus" class="mr-1 w-3 h-3" />
-                  <% end %>
-                  <%= abs(entry.start_pct) %>%
-                </p>
-              <% else %>
-                <p class="block text-slate-800">
-                  <.icon name="hero-minus" class="w-4 h-4" />
-                </p>
-              <% end %>
-            </td>
-
-            <td class="p-4 py-5">
-              <p class="block text-sm text-slate-800">
-                <%= if entry do %>
-                  US$ <%= entry.price %>
+                    <%= cond do %>
+                      <% entry.start_pct > 0 -> %>
+                        <.icon name="hero-arrow-up" class="mr-1 w-3 h-3" />
+                      <% entry.start_pct < 0 -> %>
+                        <.icon name="hero-arrow-down" class="mr-1 w-3 h-3" />
+                      <% true -> %>
+                        <.icon name="hero-minus" class="mr-1 w-3 h-3" />
+                    <% end %>
+                    {abs(entry.start_pct)}%
+                  </p>
                 <% else %>
                   <p class="block text-slate-800">
                     <.icon name="hero-minus" class="w-4 h-4" />
                   </p>
                 <% end %>
-              </p>
-            </td>
+              </td>
 
-            <td class="p-4 py-5">
-              <%= if entry do %>
-                <p class={
+              <td class="p-4 py-5">
+                <p class="block text-sm text-slate-800">
+                  <%= if entry do %>
+                    US$ {entry.price}
+                  <% else %>
+                    <p class="block text-slate-800">
+                      <.icon name="hero-minus" class="w-4 h-4" />
+                    </p>
+                  <% end %>
+                </p>
+              </td>
+
+              <td class="p-4 py-5">
+                <%= if entry do %>
+                  <p class={
                   "flex items-center justify-start text-sm " <>
                     cond do
                       entry.last_pct > 0 -> "text-green-600"
@@ -183,33 +187,33 @@ defmodule StockStreamWeb.PriceBoardLive do
                       true -> "text-blue-500"
                     end
                 }>
-                  <%= cond do %>
-                    <% entry.last_pct > 0 -> %>
-                      <.icon name="hero-arrow-up" class="mr-1 w-3 h-3" />
-                    <% entry.last_pct < 0 -> %>
-                      <.icon name="hero-arrow-down" class="mr-1 w-3 h-3" />
-                    <% true -> %>
-                      <.icon name="hero-minus" class="mr-1 w-3 h-3" />
-                  <% end %>
-                  <%= abs(entry.last_pct) %>%
-                </p>
-              <% else %>
-                <p class="block text-slate-800">
-                  <.icon name="hero-minus" class="w-4 h-4" />
-                </p>
-              <% end %>
-            </td>
+                    <%= cond do %>
+                      <% entry.last_pct > 0 -> %>
+                        <.icon name="hero-arrow-up" class="mr-1 w-3 h-3" />
+                      <% entry.last_pct < 0 -> %>
+                        <.icon name="hero-arrow-down" class="mr-1 w-3 h-3" />
+                      <% true -> %>
+                        <.icon name="hero-minus" class="mr-1 w-3 h-3" />
+                    <% end %>
+                    {abs(entry.last_pct)}%
+                  </p>
+                <% else %>
+                  <p class="block text-slate-800">
+                    <.icon name="hero-minus" class="w-4 h-4" />
+                  </p>
+                <% end %>
+              </td>
 
-            <td class="p-4 py-5 text-right w-36 rounded-lg">
-              <button
-                phx-click="toggle_sub"
-                phx-value-symbol={symbol}
-                class={"px-2 py-1 rounded text-sm " <> if MapSet.member?(@subscribed, symbol), do: "bg-red-600 text-white", else: "bg-green-600 text-white"}
-              >
-                <%= if MapSet.member?(@subscribed, symbol), do: "Unsubscribe", else: "Subscribe" %>
-              </button>
-            </td>
-          </tr>
+              <td class="p-4 py-5 text-right w-36 rounded-lg">
+                <button
+                  phx-click="toggle_sub"
+                  phx-value-symbol={symbol}
+                  class={"px-2 py-1 rounded text-sm " <> if MapSet.member?(@subscribed, symbol), do: "bg-red-600 text-white", else: "bg-green-600 text-white"}
+                >
+                  {if MapSet.member?(@subscribed, symbol), do: "Unsubscribe", else: "Subscribe"}
+                </button>
+              </td>
+            </tr>
           <% end %>
         </tbody>
       </table>
