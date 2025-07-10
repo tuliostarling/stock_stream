@@ -60,14 +60,15 @@ defmodule StockStream.MarketsTest do
       msgs =
         Stream.repeatedly(fn ->
           receive do
-            msg -> msg
+            {:price_update, ^symbol, _, _} -> 1
           after
             0 -> :done
           end
         end)
         |> Enum.take_while(&(&1 != :done))
+        |> Enum.count()
 
-      assert Enum.count(msgs) <= 1
+      assert msgs <= 1
     end
 
     test "subscriber joining late still receives future updates" do
