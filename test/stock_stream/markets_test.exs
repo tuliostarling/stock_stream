@@ -51,24 +51,13 @@ defmodule StockStream.MarketsTest do
       symbol = unique_symbol()
       {:ok, _pid} = start_stream_with_mock(symbol)
 
+      flush_price_updates(symbol)
+
       assert :ok = Markets.subscribe(symbol)
       assert {:error, :already_subscribed} = Markets.subscribe(symbol)
 
       assert_receive {:price_update, ^symbol, _, _}, @default_timeout
-      Process.sleep(20)
-
-      msgs =
-        Stream.repeatedly(fn ->
-          receive do
-            {:price_update, ^symbol, _, _} -> 1
-          after
-            0 -> :done
-          end
-        end)
-        |> Enum.take_while(&(&1 != :done))
-        |> Enum.count()
-
-      assert msgs <= 1
+      refute_receive {:price_update, ^symbol, _, _}, 5
     end
 
     test "subscriber joining late still receives future updates" do
