@@ -27,17 +27,17 @@ cd stock_stream
 asdf install        # installs elixir & erlang listed in .tool-versions
 ```
 
-### Install deps
-
-```bash
-mix deps.get
-```
-
 ### Configure dev and test
 
 ```bash
 cp config/dev.exs.example   config/dev.exs
 cp config/test.exs.example  config/test.exs
+```
+
+### Install deps
+
+```bash
+mix deps.get
 ```
 
 Edit `config/dev.exs` (or set env‑vars) to point at your local postgres. The defaults are:

@@ -8,6 +8,8 @@ defmodule StockStream.Markets.PriceStreamer do
   """
   use GenServer
 
+  require Logger
+
   alias StockStream.Markets
 
   @type state :: %{symbol: String.t(), price: float(), tick_ms: pos_integer()}
@@ -35,14 +37,18 @@ defmodule StockStream.Markets.PriceStreamer do
 
   @impl true
   @spec handle_info(:tick, state()) :: {:noreply, state()}
-  def handle_info(:tick, %{price: old_price, tick_ms: tick_ms} = state) do
+  def handle_info(:tick, %{price: old_price, tick_ms: tick_ms, symbol: symbol} = state) do
     new_price = jitter(old_price)
     last_pct = Float.round((new_price - old_price) / old_price * 100, 2)
 
+    if Registry.lookup(StockStream.Registry, {:subscriber, symbol}) != [] do
+      Logger.info(fn -> "[PUBSUB] #{symbol} → $#{new_price} (#{last_pct}%)" end)
+    end
+
     Phoenix.PubSub.broadcast(
       StockStream.PubSub,
-      Markets.topic(state.symbol),
-      {:price_update, state.symbol, new_price, last_pct}
+      Markets.topic(symbol),
+      {:price_update, symbol, new_price, last_pct}
     )
 
     schedule_tick(tick_ms)

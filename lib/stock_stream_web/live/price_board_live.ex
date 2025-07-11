@@ -3,15 +3,13 @@ defmodule StockStreamWeb.PriceBoardLive do
 
   alias StockStream.Markets
 
-  @symbols ~w(AAPL MSFT GOOG TSLA)
-
   @impl true
   def mount(_params, _session, socket) do
     {:ok,
      socket
      |> assign(
        prices: %{},
-       symbols: @symbols,
+       symbols: StockStream.Symbols.list(),
        subscribed: MapSet.new(),
        temporary_assigns: [prices: %{}]
      )}
@@ -76,7 +74,7 @@ defmodule StockStreamWeb.PriceBoardLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="w-full mb-3 mt-1">
+    <div class="w-full mb-3">
       <h3 class="text-xl font-bold text-slate-800">Live Prices</h3>
     </div>
 
@@ -136,8 +134,7 @@ defmodule StockStreamWeb.PriceBoardLive do
                   <% end %>
                 </p>
               </td>
-              
-    <!-- overall % change since start -->
+
               <td class="p-4 py-5">
                 <%= if entry do %>
                   <p class={
@@ -147,7 +144,7 @@ defmodule StockStreamWeb.PriceBoardLive do
                       entry.start_pct < 0 -> "text-red-600"
                       true -> "text-blue-500"
                     end
-                }>
+                  }>
                     <%= cond do %>
                       <% entry.start_pct > 0 -> %>
                         <.icon name="hero-arrow-up" class="mr-1 w-3 h-3" />
@@ -186,7 +183,7 @@ defmodule StockStreamWeb.PriceBoardLive do
                       entry.last_pct < 0 -> "text-red-600"
                       true -> "text-blue-500"
                     end
-                }>
+                  }>
                     <%= cond do %>
                       <% entry.last_pct > 0 -> %>
                         <.icon name="hero-arrow-up" class="mr-1 w-3 h-3" />

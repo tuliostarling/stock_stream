@@ -5,8 +5,6 @@ defmodule StockStream.Application do
 
   use Application
 
-  @default_symbols ~w(AAPL MSFT TSLA)
-
   @common_children [
     StockStreamWeb.Telemetry,
     StockStream.Repo,
@@ -38,10 +36,8 @@ defmodule StockStream.Application do
     {:ok, sup} = Supervisor.start_link(children, opts)
 
     unless Mix.env() == :test do
-      Enum.each(
-        Application.get_env(:stock_stream, :initial_symbols, @default_symbols),
-        &StockStream.Markets.start_stream/1
-      )
+      StockStream.Symbols.list()
+      |> Enum.each(&StockStream.Markets.start_stream/1)
     end
 
     {:ok, sup}

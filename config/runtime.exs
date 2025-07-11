@@ -20,6 +20,22 @@ if System.get_env("PHX_SERVER") do
   config :stock_stream, StockStreamWeb.Endpoint, server: true
 end
 
+default_symbols = ~w(
+  AAPL MSFT AMZN GOOGL TSLA
+  NVDA META NFLX AMD INTC
+  IBM  ORCL QCOM CRM PYPL
+  AVGO TXN ADI MU JPM
+)
+
+symbols =
+  System.get_env("SYMBOLS")
+  |> case do
+    nil -> default_symbols
+    csv -> String.split(csv, ",", trim: true)
+  end
+
+config :stock_stream, :initial_symbols, symbols
+
 if config_env() == :prod do
   database_url =
     System.get_env("DATABASE_URL") ||
