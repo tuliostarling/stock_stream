@@ -174,7 +174,10 @@ defmodule StockStreamWeb.PriceBoardLive do
                 focus:shadow-md uppercase"
         />
 
-        <button type="submit" class="absolute right-1 top-1 h-8 w-8 flex items-center justify-center bg-white rounded">
+        <button
+          type="submit"
+          class="absolute right-1 top-1 h-8 w-8 flex items-center justify-center bg-white rounded"
+        >
           <.icon name="hero-plus" class="w-4 h-4 text-slate-600" />
         </button>
       </form>
