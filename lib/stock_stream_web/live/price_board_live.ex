@@ -12,6 +12,7 @@ defmodule StockStreamWeb.PriceBoardLive do
        symbols: StockStream.Symbols.list(),
        subscribed: MapSet.new(),
        crashing: MapSet.new(),
+       symbol_input: "",
        temporary_assigns: [prices: %{}]
      )}
   end
@@ -34,6 +35,51 @@ defmodule StockStreamWeb.PriceBoardLive do
       |> maybe_mark_recovered(symbol)
 
     {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("crash", %{"symbol" => symbol}, socket) do
+    Markets.crash(symbol)
+
+    {:noreply,
+     socket
+     |> update(:crashing, &MapSet.put(&1, symbol))
+     |> put_flash(:info, "Stream for #{symbol} crashed (simulated)")
+     |> then(fn socket ->
+       Process.send_after(self(), :clear_flash, 5_000)
+       socket
+     end)}
+  end
+
+  @impl true
+  def handle_event("symbol_input", %{"symbol" => txt}, socket) do
+    {:noreply, assign(socket, :symbol_input, txt)}
+  end
+
+  @impl true
+  def handle_event("add_symbol", %{"symbol" => raw}, socket) do
+    symbol = raw |> String.trim() |> String.upcase()
+
+    cond do
+      symbol == "" ->
+        {:noreply, put_flash(socket, :error, "Symbol cannot be empty")}
+
+      symbol in socket.assigns.symbols ->
+        {:noreply, put_flash(socket, :error, "#{symbol} already listed")}
+
+      true ->
+        Markets.start_stream(symbol)
+
+        {:noreply,
+         socket
+         |> update(:symbols, &[symbol | &1])
+         |> assign(:symbol_input, "")
+         |> put_flash(:info, "#{symbol} added")
+         |> then(fn s ->
+           Process.send_after(self(), :clear_flash, 5_000)
+           s
+         end)}
+    end
   end
 
   @impl true
@@ -63,20 +109,6 @@ defmodule StockStreamWeb.PriceBoardLive do
        socket
      end)
      |> assign(subscribed: new_set, prices: new_prices)}
-  end
-
-  @impl true
-  def handle_event("crash", %{"symbol" => symbol}, socket) do
-    Markets.crash(symbol)
-
-    {:noreply,
-     socket
-     |> update(:crashing, &MapSet.put(&1, symbol))
-     |> put_flash(:info, "Stream for #{symbol} crashed (simulated)")
-     |> then(fn socket ->
-       Process.send_after(self(), :clear_flash, 5_000)
-       socket
-     end)}
   end
 
   defp build_entry(symbol, price, last_pct) do
@@ -116,8 +148,36 @@ defmodule StockStreamWeb.PriceBoardLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="w-full mb-3">
-      <h3 class="text-xl font-bold text-slate-800">Live Prices</h3>
+    <div class="w-full flex justify-between items-center mb-3 mt-1">
+      <div>
+        <h3 class="text-lg font-semibold text-slate-800">
+          Live Prices
+        </h3>
+        <p class="text-slate-500">
+          Add a new symbol and watch it stream.
+        </p>
+      </div>
+
+      <form
+        phx-change="symbol_input"
+        phx-submit="add_symbol"
+        class="ml-3 w-full max-w-sm min-w-[200px] relative"
+      >
+        <input
+          name="symbol"
+          value={@symbol_input}
+          placeholder="e.g. SNOW"
+          class="bg-white w-full h-10 pr-11 pl-3 py-2 placeholder:text-slate-400
+                text-slate-700 text-sm border border-slate-200 rounded
+                transition duration-300 ease focus:outline-none
+                focus:border-slate-400 hover:border-slate-400 shadow-sm
+                focus:shadow-md uppercase"
+        />
+
+        <button type="submit" class="absolute right-1 top-1 h-8 w-8 flex items-center justify-center bg-white rounded">
+          <.icon name="hero-plus" class="w-4 h-4 text-slate-600" />
+        </button>
+      </form>
     </div>
 
     <div class="shadow-md rounded-lg">
