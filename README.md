@@ -45,9 +45,10 @@ Edit `config/dev.exs` (or set env‑vars) to point at your local postgres. The d
 ```dotenv
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres
-POSTGRES_HOST=localhost
-POSTGRES_DB=stock_stream_dev
+SECRET_KEY_BASE=
 ```
+
+> To gen secret key base you can simply run `mix phx.gen.secret` on your bash and copy the value.
 
 ### Env vars
 
