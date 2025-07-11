@@ -23,6 +23,15 @@ defmodule StockStream.Application do
 
   @impl true
   def start(_type, _args) do
+    unless Mix.env() == :prod do
+      [".env.dev", ".env.local"]
+      |> Enum.map(&Path.expand/1)
+      |> Enum.filter(&File.exists?/1)
+      |> Dotenv.load()
+
+      Mix.Task.run("loadconfig")
+    end
+
     children = @common_children ++ if(Mix.env() == :test, do: [], else: @runtime_only_children)
 
     opts = [strategy: :one_for_one, name: StockStream.Supervisor]

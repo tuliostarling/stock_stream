@@ -35,6 +35,8 @@ stock_stream-*.tar
 npm-debug.log
 /assets/node_modules/
 
+.env.local
+.env.dev
 /log/
 /config/dev.exs
 /config/test.exs

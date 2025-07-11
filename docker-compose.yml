@@ -1,0 +1,49 @@
+services:
+  db:
+    image: postgres:15-alpine
+    env_file: .env.dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  app:
+    build: .
+    env_file: .env.dev
+    depends_on: 
+      - db
+    ports: 
+      - "4000:4000"
+    volumes:
+      - .:/app
+    entrypoint: >
+      /bin/sh -c "
+      until pg_isready -h db -U postgres -p 5432; do
+        echo '⏳  waiting for db…'; sleep 1;
+      done &&
+      mix ecto.create --quiet &&
+      mix ecto.migrate &&
+      exec mix phx.server
+      "
+
+  test:
+    profiles: ["test"]
+    build: .
+    environment:
+      MIX_ENV: test
+      POSTGRES_HOST: db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    depends_on: 
+      - db
+    entrypoint: >
+      /bin/sh -c "
+      mix ecto.create --quiet &&
+      mix ecto.migrate --quiet &&
+      exec mix test
+      "
+
+volumes:
+  db_data:
+  deps:
+  _build:
