@@ -11,6 +11,7 @@ defmodule StockStream.Markets.PriceStreamer do
   require Logger
 
   alias StockStream.Markets
+  alias StockStream.Markets.PriceCache
 
   @type state :: %{symbol: String.t(), price: float(), tick_ms: pos_integer()}
 
@@ -29,8 +30,14 @@ defmodule StockStream.Markets.PriceStreamer do
   @spec init({String.t(), keyword()}) :: {:ok, state()}
   def init({symbol, opts}) do
     interval = Keyword.get(opts, :tick_ms, 2_000)
-    state = %{symbol: symbol, price: random_price(), tick_ms: interval}
 
+    price =
+      case PriceCache.fetch(symbol) do
+        {:ok, price} -> price
+        :error -> random_price()
+      end
+
+    state = %{symbol: symbol, price: price, tick_ms: interval}
     schedule_tick(interval)
     {:ok, state}
   end
@@ -40,6 +47,8 @@ defmodule StockStream.Markets.PriceStreamer do
   def handle_info(:tick, %{price: old_price, tick_ms: tick_ms, symbol: symbol} = state) do
     new_price = jitter(old_price)
     last_pct = Float.round((new_price - old_price) / old_price * 100, 2)
+
+    PriceCache.put(symbol, new_price)
 
     if Registry.lookup(StockStream.Registry, {:subscriber, symbol}) != [] do
       Logger.info(fn -> "[PUBSUB] #{symbol} → $#{new_price} (#{last_pct}%)" end)
@@ -54,6 +63,10 @@ defmodule StockStream.Markets.PriceStreamer do
     schedule_tick(tick_ms)
     {:noreply, %{state | price: new_price}}
   end
+
+  @impl true
+  @spec handle_cast(:crash, state()) :: {:stop, :crash_simulated, state()}
+  def handle_cast(:crash, state), do: {:stop, :crash_simulated, state}
 
   @spec schedule_tick(pos_integer()) :: reference()
   defp schedule_tick(ms), do: Process.send_after(self(), :tick, ms)

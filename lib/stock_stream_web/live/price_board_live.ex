@@ -11,6 +11,7 @@ defmodule StockStreamWeb.PriceBoardLive do
        prices: %{},
        symbols: StockStream.Symbols.list(),
        subscribed: MapSet.new(),
+       crashing: MapSet.new(),
        temporary_assigns: [prices: %{}]
      )}
   end
@@ -19,27 +20,20 @@ defmodule StockStreamWeb.PriceBoardLive do
   def handle_info(:clear_flash, socket), do: {:noreply, clear_flash(socket)}
 
   @impl true
+  def handle_info({:recover_symbol, symbol}, %{assigns: %{crashing: crashing}} = socket) do
+    {:noreply, assign(socket, :crashing, MapSet.delete(crashing, symbol))}
+  end
+
+  @impl true
   def handle_info({:price_update, symbol, price, last_pct}, socket) do
-    entry =
-      case socket.assigns.prices[symbol] do
-        nil ->
-          %{
-            start: price,
-            price: price,
-            start_pct: 0.0,
-            last_pct: 0.0
-          }
+    entry = build_entry(socket.assigns.prices[symbol], price, last_pct)
 
-        %{start: start_price} = prev ->
-          %{
-            prev
-            | price: price,
-              start_pct: Float.round((price - start_price) / start_price * 100, 2),
-              last_pct: last_pct
-          }
-      end
+    socket =
+      socket
+      |> update(:prices, &Map.put(&1, symbol, entry))
+      |> maybe_mark_recovered(symbol)
 
-    {:noreply, update(socket, :prices, &Map.put(&1, symbol, entry))}
+    {:noreply, socket}
   end
 
   @impl true
@@ -69,6 +63,54 @@ defmodule StockStreamWeb.PriceBoardLive do
        socket
      end)
      |> assign(subscribed: new_set, prices: new_prices)}
+  end
+
+  @impl true
+  def handle_event("crash", %{"symbol" => symbol}, socket) do
+    Markets.crash(symbol)
+
+    {:noreply,
+     socket
+     |> update(:crashing, &MapSet.put(&1, symbol))
+     |> put_flash(:info, "Stream for #{symbol} crashed (simulated)")
+     |> then(fn socket ->
+       Process.send_after(self(), :clear_flash, 5_000)
+       socket
+     end)}
+  end
+
+  defp build_entry(symbol, price, last_pct) do
+    case symbol do
+      nil ->
+        %{
+          start: price,
+          price: price,
+          start_pct: 0.0,
+          last_pct: 0.0
+        }
+
+      %{start: start_price} = prev ->
+        %{
+          prev
+          | price: price,
+            start_pct: Float.round((price - start_price) / start_price * 100, 2),
+            last_pct: last_pct
+        }
+    end
+  end
+
+  defp maybe_mark_recovered(socket, symbol) do
+    if MapSet.member?(socket.assigns.crashing, symbol) do
+      socket
+      |> update(:crashing, &MapSet.delete(&1, symbol))
+      |> put_flash(:info, "Stream for #{symbol} restarted")
+      |> then(fn s ->
+        Process.send_after(self(), :clear_flash, 5_000)
+        s
+      end)
+    else
+      socket
+    end
   end
 
   @impl true
@@ -201,14 +243,31 @@ defmodule StockStreamWeb.PriceBoardLive do
                 <% end %>
               </td>
 
-              <td class="p-4 py-5 text-right w-36 rounded-lg">
+              <td class="p-4 py-5 flex justify-evenly items-center text-right rounded-lg">
                 <button
                   phx-click="toggle_sub"
                   phx-value-symbol={symbol}
-                  class={"px-2 py-1 rounded text-sm " <> if MapSet.member?(@subscribed, symbol), do: "bg-red-600 text-white", else: "bg-green-600 text-white"}
+                  disabled={MapSet.member?(@crashing, symbol)}
+                  class={
+                    "px-2 py-1 rounded text-sm " <>
+                    (if MapSet.member?(@subscribed, symbol), do: "bg-red-600 text-white", else: "bg-green-600 text-white") <>
+                    (if MapSet.member?(@crashing, symbol), do: " opacity-50 cursor-not-allowed", else: "")
+                  }
                 >
                   {if MapSet.member?(@subscribed, symbol), do: "Unsubscribe", else: "Subscribe"}
                 </button>
+
+                <%= if MapSet.member?(@crashing, symbol) do %>
+                  <.icon name="hero-arrow-path" class="animate-spin w-4 h-4 text-slate-500" />
+                <% else %>
+                  <button
+                    phx-click="crash"
+                    phx-value-symbol={symbol}
+                    class="px-2 py-1 bg-yellow-500 hover:bg-yellow-600 text-white rounded text-sm"
+                  >
+                    Crash
+                  </button>
+                <% end %>
               </td>
             </tr>
           <% end %>

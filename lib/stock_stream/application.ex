@@ -11,7 +11,8 @@ defmodule StockStream.Application do
     {DNSCluster, query: Application.compile_env(:stock_stream, :dns_cluster_query) || :ignore},
     {Phoenix.PubSub, name: StockStream.PubSub},
     {Finch, name: StockStream.Finch},
-    StockStreamWeb.Endpoint
+    StockStreamWeb.Endpoint,
+    StockStream.Markets.PriceCache
   ]
 
   @runtime_only_children [

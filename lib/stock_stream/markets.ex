@@ -38,6 +38,12 @@ defmodule StockStream.Markets do
     PubSub.unsubscribe(StockStream.PubSub, topic(symbol))
   end
 
+  @spec crash(String.t()) :: :ok
+  def crash(symbol) do
+    Logger.warning("[CRASH] #{symbol} - simulated")
+    symbol |> PriceStreamer.via() |> GenServer.cast(:crash)
+  end
+
   @doc "Broadcast helper to be used internally"
   @spec topic(String.t()) :: String.t()
   def topic(symbol), do: "prices:#{symbol}"
