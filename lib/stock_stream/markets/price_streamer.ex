@@ -24,7 +24,7 @@ defmodule StockStream.Markets.PriceStreamer do
   end
 
   @spec via(String.t()) :: {:via, module(), term()}
-  def via(symbol), do: {:via, Registry, {StockStream.Registry, {:streamer, symbol}}}
+  def via(symbol), do: {:via, Registry, {StockStream.StreamRegistry, {:streamer, symbol}}}
 
   @impl true
   @spec init({String.t(), keyword()}) :: {:ok, state()}
@@ -50,8 +50,18 @@ defmodule StockStream.Markets.PriceStreamer do
 
     PriceCache.put(symbol, new_price)
 
-    if Registry.lookup(StockStream.Registry, {:subscriber, symbol}) != [] do
-      Logger.info(fn -> "[PUBSUB] #{symbol} → $#{new_price} (#{last_pct}%)" end)
+    StockStream.SubscriberRegistry
+    |> Registry.lookup({:subscriber, symbol})
+    |> case do
+      [] ->
+        :ok
+
+      listeners ->
+        pids = for {pid, _} <- listeners, do: pid
+
+        Logger.debug(fn ->
+          "[PUBSUB] #{symbol} → $#{new_price} (#{last_pct}%)  listeners=#{inspect(pids)}"
+        end)
     end
 
     Phoenix.PubSub.broadcast(

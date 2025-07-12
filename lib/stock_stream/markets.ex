@@ -19,22 +19,25 @@ defmodule StockStream.Markets do
 
   @spec subscribe(String.t()) :: :ok | {:error, :already_subscribed}
   def subscribe(symbol) do
-    case Registry.register(StockStream.Registry, {:subscriber, symbol}, nil) do
-      {:ok, _} ->
-        Logger.info("[SUB] pid #{inspect(self())} subscribed to #{symbol}")
-        PubSub.subscribe(StockStream.PubSub, topic(symbol))
-        :ok
+    key = {:subscriber, symbol}
 
-      {:error, {:already_registered, _}} ->
-        Logger.info("[SUB] already subscribed to #{symbol}")
+    case Registry.lookup(StockStream.SubscriberRegistry, key) do
+      [{pid, _} | _] when pid == self() ->
+        Logger.info("[SUB] pid #{inspect(pid)} already subscribed to #{symbol}")
         {:error, :already_subscribed}
+
+      _not_subscribed ->
+        Registry.register(StockStream.SubscriberRegistry, key, nil)
+        PubSub.subscribe(StockStream.PubSub, topic(symbol))
+        Logger.info("[SUB] pid #{inspect(self())} subscribed to #{symbol}")
+        :ok
     end
   end
 
   @spec unsubscribe(String.t()) :: :ok
   def unsubscribe(symbol) do
     Logger.info("[UNSUB] pid #{inspect(self())} unsubscribed from #{symbol}")
-    Registry.unregister(StockStream.Registry, {:subscriber, symbol})
+    Registry.unregister(StockStream.SubscriberRegistry, {:subscriber, symbol})
     PubSub.unsubscribe(StockStream.PubSub, topic(symbol))
   end
 

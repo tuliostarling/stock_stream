@@ -18,21 +18,27 @@ defmodule StockStream.MarketsTest do
 
     test "multiple subscribers receive updates for the same symbol" do
       symbol = unique_symbol()
-      {:ok, _pid} = start_stream_with_mock(symbol)
+      parent = self()
 
-      for _ <- 1..3 do
-        spawn(fn ->
-          Markets.subscribe(symbol)
+      tasks =
+        for _ <- 1..3 do
+          Task.async(fn ->
+            :ok = Markets.subscribe(symbol)
+            send(parent, :ready)
 
-          receive do
-            {:price_update, ^symbol, _price, _pct} -> exit(:ok)
-          after
-            300 -> exit(:timeout)
-          end
-        end)
-      end
+            receive do
+              {:price_update, ^symbol, _, _} -> :ok
+            after
+              300 -> {:error, :timeout}
+            end
+          end)
+        end
 
-      Process.sleep(@default_timeout)
+      Enum.each(1..3, fn _ -> assert_receive :ready, 100 end)
+      {:ok, _pid} = start_stream_with_mock(symbol, tick_ms: 20)
+
+      results = Enum.map(tasks, &Task.await(&1, 400))
+      assert Enum.all?(results, &(&1 == :ok))
     end
 
     test "subscriber only receives updates for the subscribed symbol" do

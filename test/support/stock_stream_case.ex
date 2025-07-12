@@ -9,7 +9,8 @@ defmodule StockStream.StockStreamCase do
   end
 
   setup_all do
-    start_supervised!({Registry, keys: :unique, name: StockStream.Registry})
+    start_supervised!({Registry, keys: :unique, name: StockStream.StreamRegistry})
+    start_supervised!({Registry, keys: :duplicate, name: StockStream.SubscriberRegistry})
 
     start_supervised!({
       DynamicSupervisor,

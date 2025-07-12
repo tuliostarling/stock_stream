@@ -4,7 +4,7 @@ defmodule StockStream.StreamTestHelper do
 
   alias StockStream.Markets
 
-  @registry StockStream.Registry
+  @registry StockStream.StreamRegistry
 
   @doc "Starts a stream and calls Mox.allow without subscribing"
   @spec start_stream_with_mock(String.t(), keyword()) :: {:ok, pid()}
@@ -19,7 +19,7 @@ defmodule StockStream.StreamTestHelper do
   def start_and_subscribe(symbol, opts \\ [tick_ms: 10]) do
     {:ok, _pid} = Markets.start_stream(symbol, opts)
 
-    [{streamer_pid, _}] = Registry.lookup(StockStream.Registry, {:streamer, symbol})
+    [{streamer_pid, _}] = Registry.lookup(@registry, {:streamer, symbol})
 
     :ok = Markets.subscribe(symbol)
     {:ok, streamer_pid}

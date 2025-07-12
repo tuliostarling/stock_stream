@@ -16,7 +16,8 @@ defmodule StockStream.Application do
   ]
 
   @runtime_only_children [
-    {Registry, keys: :unique, name: StockStream.Registry},
+    {Registry, keys: :unique, name: StockStream.StreamRegistry},
+    {Registry, keys: :duplicate, name: StockStream.SubscriberRegistry},
     StockStream.Markets.Supervisor
   ]
 
